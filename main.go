@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/elb"
 	"log"
@@ -18,6 +19,12 @@ func init() {
 	flag.StringVar(&region, "region", os.Getenv("AWS_REGION"), "AWS region in which the ELB resides")
 	flag.StringVar(&accesskey, "accesskey", os.Getenv("AWS_ACCESS_KEY"), "AWS Access Key")
 	flag.StringVar(&secretkey, "secretkey", os.Getenv("AWS_SECRET_KEY"), "AWS Secret Key")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "go-elb-presence\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 }
 
