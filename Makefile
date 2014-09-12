@@ -1,8 +1,8 @@
-all: build/elb-presence
+all: go-elb-presence
 
-build/elb-presence: *.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o build/elb-presence
+go-elb-presence: *.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a
 
 .PHONY: clean
 clean:
-	rm build/elb-presence
+	rm go-elb-presence
