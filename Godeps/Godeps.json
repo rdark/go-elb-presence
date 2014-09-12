@@ -1,0 +1,14 @@
+{
+	"ImportPath": "github.com/majorleaguesoccer/go-elb-presence",
+	"GoVersion": "go1.3.1",
+	"Deps": [
+		{
+			"ImportPath": "github.com/crowdmob/goamz/aws",
+			"Rev": "6c57531496883859a5876ee28813c83747c48992"
+		},
+		{
+			"ImportPath": "github.com/crowdmob/goamz/elb",
+			"Rev": "6c57531496883859a5876ee28813c83747c48992"
+		}
+	]
+}
