@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/brycekahle/goamz/ec2"
@@ -9,15 +10,33 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
 
-var lbname, region, accesskey, secretkey, securityGroupID string
+type csv []string
+
+func (i *csv) String() string {
+	return fmt.Sprint(*i)
+}
+
+func (i *csv) Set(value string) error {
+	if len(*i) > 0 {
+		return errors.New("csv flag already set")
+	}
+	for _, dt := range strings.Split(value, ",") {
+		*i = append(*i, dt)
+	}
+	return nil
+}
+
+var region, accesskey, secretkey, securityGroupID string
+var lbnames csv
 var awsec2 *ec2.EC2
 
 func init() {
-	flag.StringVar(&lbname, "lbname", os.Getenv("ELB_NAME"), "name of the ELB to register the instance with")
+	flag.Var(&lbnames, "lbname", "name of the ELB to register the instance with")
 	flag.StringVar(&securityGroupID, "groupid", os.Getenv("SECURITY_GROUP_ID"), "id of the EC2 security group to add this instance to")
 	flag.StringVar(&region, "region", os.Getenv("AWS_REGION"), "AWS region in which the ELB resides")
 	flag.StringVar(&accesskey, "accesskey", os.Getenv("AWS_ACCESS_KEY"), "AWS Access Key")
@@ -29,6 +48,9 @@ func init() {
 	}
 
 	flag.Parse()
+	if len(lbnames) == 0 {
+		lbnames.Set(os.Getenv("ELB_NAME"))
+	}
 }
 
 func main() {
@@ -62,12 +84,14 @@ func main() {
 	}
 
 	awselb := elb.New(auth, aws.GetRegion(region))
-	_, err = awselb.RegisterInstancesWithLoadBalancer([]string{instanceID}, lbname)
-	if err != nil {
-		log.Fatalln("Error registering instance", err)
-	}
+	for _, lbname := range lbnames {
+		_, err = awselb.RegisterInstancesWithLoadBalancer([]string{instanceID}, lbname)
+		if err != nil {
+			log.Fatalln("Error registering instance", err)
+		}
 
-	log.Printf("Registered instance %s with elb %s\n", instanceID, lbname)
+		log.Printf("Registered instance %s with elb %s\n", instanceID, lbname)
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
@@ -75,12 +99,14 @@ func main() {
 	// this waits until we get a kill signal
 	<-c
 
-	_, err = awselb.DeregisterInstancesFromLoadBalancer([]string{instanceID}, lbname)
-	if err != nil {
-		log.Fatalln("Error deregistering instance", err)
-	}
+	for _, lbname := range lbnames {
+		_, err = awselb.DeregisterInstancesFromLoadBalancer([]string{instanceID}, lbname)
+		if err != nil {
+			log.Fatalln("Error deregistering instance", err)
+		}
 
-	log.Printf("Deregistered instance %s with elb %s\n", instanceID, lbname)
+		log.Printf("Deregistered instance %s with elb %s\n", instanceID, lbname)
+	}
 
 	if securityGroupID != "" {
 		groupMap := getSecurityGroupIds(instanceID)
